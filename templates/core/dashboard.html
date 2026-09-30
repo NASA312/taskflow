@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · TaskFlow{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Bienvenido, {{ user.first_name|default:user.username }}</h1>
+
+{% if not user.company %}
+  <div class="bg-yellow-100 text-yellow-900 p-4 rounded">
+    Tu usuario no está asignado a ninguna empresa. Pide a un administrador que te asigne una.
+  </div>
+{% else %}
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="bg-white rounded-lg shadow p-5">
+      <p class="text-sm text-slate-500">Proyectos activos</p>
+      <p class="text-3xl font-bold">0</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+      <p class="text-sm text-slate-500">Mis tareas pendientes</p>
+      <p class="text-3xl font-bold">0</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+      <p class="text-sm text-slate-500">Vencen esta semana</p>
+      <p class="text-3xl font-bold">0</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
