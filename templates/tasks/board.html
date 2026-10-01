@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Tablero · {{ project.name }} · TaskFlow{% endblock %}
+
+{% block content %}
+<a href="{{ project.get_absolute_url }}" class="text-sm text-blue-600 hover:underline">← {{ project.name }}</a>
+
+<div class="flex justify-between items-center mt-2 mb-4">
+  <h1 class="text-2xl font-bold">Tablero</h1>
+  {% if can_manage %}
+    <a href="{% url 'task_create' project.pk %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Nueva tarea</a>
+  {% endif %}
+</div>
+
+<form method="get" class="grid sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-4 text-sm">
+  <input name="q" value="{{ filters.q }}" placeholder="Buscar tarea"
+         class="border border-slate-300 rounded px-3 py-2 lg:col-span-2">
+  <select name="assignee" class="border border-slate-300 rounded px-3 py-2">
+    <option value="">Todos los responsables</option>
+    <option value="me" {% if filters.assignee == "me" %}selected{% endif %}>Mis tareas</option>
+    <option value="none" {% if filters.assignee == "none" %}selected{% endif %}>Sin asignar</option>
+    {% for u in project_users %}
+      <option value="{{ u.pk }}" {% if filters.assignee == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+    {% endfor %}
+  </select>
+  <select name="priority" class="border border-slate-300 rounded px-3 py-2">
+    <option value="">Toda prioridad</option>
+    {% for value, label in priorities %}
+      <option value="{{ value }}" {% if filters.priority == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="due" class="border border-slate-300 rounded px-3 py-2">
+    <option value="">Cualquier fecha</option>
+    <option value="overdue" {% if filters.due == "overdue" %}selected{% endif %}>Atrasadas</option>
+    <option value="week" {% if filters.due == "week" %}selected{% endif %}>Vencen en 7 días</option>
+    <option value="none" {% if filters.due == "none" %}selected{% endif %}>Sin fecha</option>
+  </select>
+  <div class="flex gap-2">
+    <button class="bg-slate-800 text-white px-4 rounded flex-1">Filtrar</button>
+    {% if has_filters %}<a href="{% url 'project_board' project.pk %}" class="px-3 py-2 border rounded hover:bg-slate-50">Limpiar</a>{% endif %}
+  </div>
+</form>
+
+<div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+  {% for value, label, column_tasks in columns %}
+  <section class="bg-slate-200/70 rounded-lg p-3">
+    <h2 class="font-semibold text-sm mb-3 flex justify-between items-center">
+      <span>{{ label }}
+        <span id="count-{{ value }}" class="ml-1 bg-white rounded-full px-2 text-xs">{{ column_tasks|length }}</span>
+      </span>
+      {% if can_manage %}
+        <a href="{% url 'task_create' project.pk %}?status={{ value }}" class="text-blue-600 hover:underline text-lg leading-none" title="Agregar tarea aquí">+</a>
+      {% endif %}
+    </h2>
+    <div class="kanban-col space-y-2 min-h-[8rem]" data-status="{{ value }}">
+      {% for t in column_tasks %}
+        {% include "tasks/partials/card.html" %}
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+{% if has_filters %}
+  <p class="text-xs text-slate-500 mt-3">Estás viendo un tablero filtrado. Si reordenas tarjetas, el orden se guarda solo entre las visibles.</p>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+  const csrfToken = "{{ csrf_token }}";
+
+  function updateCounts() {
+    document.querySelectorAll(".kanban-col").forEach((col) => {
+      document.getElementById("count-" + col.dataset.status).textContent =
+        col.querySelectorAll(".kanban-card").length;
+    });
+  }
+
+  document.querySelectorAll(".kanban-col").forEach((col) => {
+    new Sortable(col, {
+      group: "kanban",
+      animation: 150,
+      draggable: ".kanban-card",
+      filter: ".no-drag",          // tarjetas que este usuario no puede mover
+      preventOnFilter: false,      // para que el enlace de la tarjeta siga funcionando
+      ghostClass: "opacity-40",
+      onEnd(evt) {
+        if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
+        const target = evt.to;
+        const body = new URLSearchParams();
+        body.append("status", target.dataset.status);
+        target.querySelectorAll(".kanban-card").forEach((c) => body.append("order", c.dataset.id));
+
+        fetch(evt.item.dataset.moveUrl, {
+          method: "POST",
+          headers: { "X-CSRFToken": csrfToken, "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+        })
+          .then(async (r) => {
+            if (!r.ok) {
+              const data = await r.json().catch(() => ({}));
+              alert(data.error || "No se pudo mover la tarea.");
+              location.reload();
+              return;
+            }
+            updateCounts();
+          })
+          .catch(() => location.reload());
+      },
+    });
+  });
+</script>
+{% endblock %}

@@ -8,41 +8,67 @@
   <div class="bg-yellow-100 text-yellow-900 p-4 rounded flex items-center justify-between gap-4">
     <span>Aún no perteneces a ninguna empresa. Crea la tuya o pide una invitación a tu administrador.</span>
     <a href="{% url 'company_create' %}"
-       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded whitespace-nowrap">
-      Crear mi empresa
-    </a>
+       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded whitespace-nowrap">Crear mi empresa</a>
   </div>
 {% else %}
-  <div class="grid md:grid-cols-3 gap-4">
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="bg-white rounded-lg shadow p-5">
       <p class="text-sm text-slate-500">Proyectos activos</p>
       <p class="text-3xl font-bold">{{ active_projects }}</p>
     </div>
     <div class="bg-white rounded-lg shadow p-5">
       <p class="text-sm text-slate-500">Mis tareas pendientes</p>
-      <p class="text-3xl font-bold">0</p>
+      <p class="text-3xl font-bold">{{ my_pending }}</p>
     </div>
     <div class="bg-white rounded-lg shadow p-5">
       <p class="text-sm text-slate-500">Vencen esta semana</p>
-      <p class="text-3xl font-bold">0</p>
+      <p class="text-3xl font-bold">{{ due_this_week }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+      <p class="text-sm text-slate-500">Atrasadas</p>
+      <p class="text-3xl font-bold {% if overdue %}text-red-600{% endif %}">{{ overdue }}</p>
     </div>
   </div>
 
-  <div class="bg-white rounded-lg shadow p-5 mt-6">
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="font-semibold">Proyectos recientes</h2>
-      <a href="{% url 'project_list' %}" class="text-sm text-blue-600 hover:underline">Ver todos</a>
+  <div class="grid lg:grid-cols-2 gap-6 mt-6">
+    <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-semibold">Mis próximas tareas</h2>
+        <a href="{% url 'my_tasks' %}" class="text-sm text-blue-600 hover:underline">Ver todas</a>
+      </div>
+      <ul class="divide-y">
+        {% for t in my_tasks %}
+          <li class="py-2 flex justify-between items-center text-sm">
+            <div>
+              <a href="{{ t.get_absolute_url }}" class="text-blue-700 hover:underline">{{ t.title }}</a>
+              <p class="text-xs text-slate-500">{{ t.project.name }}</p>
+            </div>
+            <span class="{% if t.is_overdue %}text-red-600 font-medium{% else %}text-slate-500{% endif %}">
+              {{ t.due_date|date:"d/m"|default:"Sin fecha" }}
+            </span>
+          </li>
+        {% empty %}
+          <li class="py-2 text-sm text-slate-500">No tienes tareas pendientes.</li>
+        {% endfor %}
+      </ul>
     </div>
-    <ul class="divide-y">
-      {% for p in recent_projects %}
-        <li class="py-2 flex justify-between items-center">
-          <a href="{{ p.get_absolute_url }}" class="text-blue-700 hover:underline">{{ p.name }}</a>
-          {% include "projects/partials/status_badge.html" with project=p %}
-        </li>
-      {% empty %}
-        <li class="py-2 text-sm text-slate-500">Aún no tienes proyectos.</li>
-      {% endfor %}
-    </ul>
+
+    <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-semibold">Proyectos recientes</h2>
+        <a href="{% url 'project_list' %}" class="text-sm text-blue-600 hover:underline">Ver todos</a>
+      </div>
+      <ul class="divide-y">
+        {% for p in recent_projects %}
+          <li class="py-2 flex justify-between items-center">
+            <a href="{{ p.get_absolute_url }}" class="text-blue-700 hover:underline">{{ p.name }}</a>
+            {% include "projects/partials/status_badge.html" with project=p %}
+          </li>
+        {% empty %}
+          <li class="py-2 text-sm text-slate-500">Aún no tienes proyectos.</li>
+        {% endfor %}
+      </ul>
+    </div>
   </div>
 {% endif %}
 {% endblock %}

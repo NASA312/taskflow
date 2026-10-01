@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Mis tareas · TaskFlow{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Mis tareas</h1>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-left text-slate-500">
+      <tr>
+        <th class="px-4 py-3">Tarea</th><th class="px-4 py-3">Proyecto</th>
+        <th class="px-4 py-3">Estado</th><th class="px-4 py-3">Prioridad</th><th class="px-4 py-3">Fecha límite</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for t in tasks %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3"><a href="{{ t.get_absolute_url }}" class="text-blue-700 font-medium hover:underline">{{ t.title }}</a></td>
+        <td class="px-4 py-3">{{ t.project.name }}</td>
+        <td class="px-4 py-3">{{ t.get_status_display }}</td>
+        <td class="px-4 py-3">{{ t.get_priority_display }}</td>
+        <td class="px-4 py-3 {% if t.is_overdue %}text-red-600 font-medium{% endif %}">{{ t.due_date|date:"d/m/Y"|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No tienes tareas pendientes.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<div class="flex justify-between mt-4 text-sm">
+  {% if page_obj.has_previous %}<a class="text-blue-600" href="?page={{ page_obj.previous_page_number }}">← Anterior</a>{% else %}<span></span>{% endif %}
+  <span class="text-slate-500">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="text-blue-600" href="?page={{ page_obj.next_page_number }}">Siguiente →</a>{% else %}<span></span>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -85,6 +85,17 @@ class Project(TimeStampedModel, SoftDeleteModel):
             and self.members.filter(user=user, role=ProjectMember.Role.MANAGER).exists()
         )
 
+    def user_can_participate(self, user):
+        """Comentar, adjuntar y trabajar en tareas (no aplica a solo lectura ni clientes)."""
+        if not user.is_authenticated or user.company_id != self.company_id:
+            return False
+        if user.is_company_admin:
+            return True
+        if user.role == user.Role.CLIENT:
+            return False
+        return self.members.filter(
+            user=user, role__in=[ProjectMember.Role.MANAGER, ProjectMember.Role.MEMBER]
+        ).exists()
 
 class ProjectMember(models.Model):
     class Role(models.TextChoices):

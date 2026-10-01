@@ -1,0 +1,26 @@
+<div class="kanban-card bg-white rounded-lg shadow-sm p-3 border-l-4
+  {% if t.priority == 4 %}border-red-500{% elif t.priority == 3 %}border-orange-400{% elif t.priority == 2 %}border-blue-400{% else %}border-slate-300{% endif %}
+  {% if t.movable %}cursor-grab{% else %}no-drag{% endif %}"
+     data-id="{{ t.pk }}" data-move-url="{% url 'task_move' t.pk %}">
+  <a href="{% url 'task_detail' t.pk %}" class="text-sm font-medium hover:underline">{{ t.title }}</a>
+
+  <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+    <span>{{ t.get_priority_display }}</span>
+    {% if t.due_date %}
+      <span class="{% if t.is_overdue %}text-red-600 font-medium{% endif %}">{{ t.due_date|date:"d/m" }}</span>
+    {% endif %}
+    {% if t.sub_total %}<span>Subtareas {{ t.sub_done }}/{{ t.sub_total }}</span>{% endif %}
+    {% if t.blocked_count %}<span class="text-orange-600 font-medium">Bloqueada</span>{% endif %}
+  </div>
+
+  {% if t.assignees.all %}
+  <div class="mt-2 flex -space-x-1">
+    {% for a in t.assignees.all %}
+      <span title="{{ a.get_full_name|default:a.username }}"
+            class="inline-flex items-center justify-center h-6 w-6 rounded-full bg-slate-700 text-white text-[10px] ring-2 ring-white">
+        {{ a.get_full_name|default:a.username|slice:":2"|upper }}
+      </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

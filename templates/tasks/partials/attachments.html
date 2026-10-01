@@ -1,0 +1,25 @@
+<h2 class="font-semibold mb-3">Archivos ({{ attachments|length }})</h2>
+<ul class="divide-y text-sm">
+  {% for a in attachments %}
+  <li class="py-2 flex items-center justify-between gap-2">
+    <div class="min-w-0">
+      <a href="{% url 'attachment_download' task.pk a.pk %}" class="text-blue-700 hover:underline block truncate">{{ a.filename }}</a>
+      <p class="text-xs text-slate-500">{{ a.size|filesizeformat }} · {{ a.uploaded_by.get_full_name|default:a.uploaded_by.username|default:"—" }}</p>
+    </div>
+    {% if can_manage or a.uploaded_by_id == user.id %}
+      <button hx-post="{% url 'attachment_delete' task.pk a.pk %}" hx-target="#attachments"
+              hx-confirm="¿Eliminar este archivo?" class="text-xs text-red-600 hover:underline">Eliminar</button>
+    {% endif %}
+  </li>
+  {% empty %}
+  <li class="py-2 text-slate-500">Sin archivos adjuntos.</li>
+  {% endfor %}
+</ul>
+
+{% if can_participate and attachment_form %}
+<form hx-post="{% url 'attachment_add' task.pk %}" hx-target="#attachments" hx-encoding="multipart/form-data"
+      class="mt-4 space-y-2 border-t pt-4">
+  {% include "includes/form_fields.html" with form=attachment_form %}
+  <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Subir</button>
+</form>
+{% endif %}

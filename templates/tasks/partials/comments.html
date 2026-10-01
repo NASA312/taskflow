@@ -1,0 +1,25 @@
+<h2 class="font-semibold mb-3">Comentarios ({{ comments|length }})</h2>
+<ul class="space-y-4">
+  {% for c in comments %}
+  <li class="text-sm">
+    <div class="flex justify-between items-center">
+      <p class="font-medium">{{ c.author.get_full_name|default:c.author.username|default:"Usuario eliminado" }}
+        <span class="text-xs text-slate-500 font-normal">· {{ c.created_at|date:"d/m/Y H:i" }}</span></p>
+      {% if can_manage or c.author_id == user.id %}
+        <button hx-post="{% url 'comment_delete' task.pk c.pk %}" hx-target="#comments"
+                hx-confirm="¿Eliminar este comentario?" class="text-xs text-red-600 hover:underline">Eliminar</button>
+      {% endif %}
+    </div>
+    <p class="text-slate-700 whitespace-pre-line mt-1">{{ c.body }}</p>
+  </li>
+  {% empty %}
+  <li class="text-sm text-slate-500">Todavía no hay comentarios.</li>
+  {% endfor %}
+</ul>
+
+{% if can_participate and comment_form %}
+<form hx-post="{% url 'comment_add' task.pk %}" hx-target="#comments" class="mt-4 space-y-2 border-t pt-4">
+  {% include "includes/form_fields.html" with form=comment_form %}
+  <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Comentar</button>
+</form>
+{% endif %}

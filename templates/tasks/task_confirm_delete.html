@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Eliminar tarea · TaskFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded-xl shadow p-8">
+  <h1 class="text-xl font-bold mb-2">Eliminar tarea</h1>
+  <p class="text-slate-600 mb-6">¿Seguro que quieres eliminar <strong>{{ object.title }}</strong>? Sus subtareas también dejarán de mostrarse.</p>
+  <form method="post" class="flex gap-3">
+    {% csrf_token %}
+    <button class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded">Sí, eliminar</button>
+    <a href="{{ object.get_absolute_url }}" class="px-5 py-2 rounded border hover:bg-slate-50">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.companies",
     "apps.accounts",
     "apps.projects",
+    "apps.tasks",
 ]
 
 MIDDLEWARE = [
@@ -126,3 +127,4 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_FROM_EMAIL = "TaskFlow <no-reply@taskflow.local>"
 INVITATION_EXPIRY_DAYS = 7
+MAX_UPLOAD_MB = 10

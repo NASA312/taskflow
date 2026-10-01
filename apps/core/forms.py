@@ -11,5 +11,7 @@ class TailwindFormMixin:
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             widget = field.widget
+            if isinstance(widget, forms.CheckboxSelectMultiple):
+                continue
             css = "h-4 w-4" if isinstance(widget, forms.CheckboxInput) else INPUT_CLASSES
             widget.attrs["class"] = f'{widget.attrs.get("class", "")} {css}'.strip()

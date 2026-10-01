@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }} · TaskFlow{% endblock %}
+
+{% block content %}
+<a href="{% url 'project_board' task.project_id %}" class="text-sm text-blue-600 hover:underline">← Tablero de {{ task.project.name }}</a>
+
+<div class="flex justify-between items-start mt-2 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold">{{ task.title }}</h1>
+    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+      <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">{{ task.get_status_display }}</span>
+      <span class="px-2 py-0.5 rounded font-medium
+        {% if task.priority == 4 %}bg-red-100 text-red-800{% elif task.priority == 3 %}bg-orange-100 text-orange-800{% elif task.priority == 2 %}bg-blue-100 text-blue-800{% else %}bg-slate-100 text-slate-700{% endif %}">
+        Prioridad {{ task.get_priority_display|lower }}
+      </span>
+      {% if task.is_overdue %}<span class="text-red-600 font-medium">Atrasada</span>{% endif %}
+    </div>
+  </div>
+  {% if can_manage %}
+  <div class="flex gap-2">
+    <a href="{% url 'task_update' task.pk %}" class="bg-white border px-3 py-2 rounded text-sm hover:bg-slate-50">Editar</a>
+    <a href="{% url 'task_delete' task.pk %}" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm">Eliminar</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="bg-white rounded-lg shadow p-5">
+      <h2 class="font-semibold mb-2">Descripción</h2>
+      {% if task.description %}
+        <p class="text-slate-700 whitespace-pre-line">{{ task.description }}</p>
+      {% else %}
+        <p class="text-sm text-slate-500">Sin descripción.</p>
+      {% endif %}
+    </div>
+
+    <div id="subtasks" class="bg-white rounded-lg shadow p-5">
+      {% include "tasks/partials/subtasks.html" %}
+    </div>
+
+    <div id="comments" class="bg-white rounded-lg shadow p-5">
+      {% include "tasks/partials/comments.html" %}
+    </div>
+  </div>
+
+  <div class="space-y-6">
+    <div class="bg-white rounded-lg shadow p-5 text-sm space-y-3">
+      <div>
+        <p class="text-slate-500">Responsables</p>
+        {% for a in task.assignees.all %}
+          <p class="font-medium">{{ a.get_full_name|default:a.username }}</p>
+        {% empty %}
+          <p class="font-medium">Sin asignar</p>
+        {% endfor %}
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><p class="text-slate-500">Inicio</p><p class="font-medium">{{ task.start_date|date:"d/m/Y"|default:"—" }}</p></div>
+        <div><p class="text-slate-500">Límite</p><p class="font-medium">{{ task.due_date|date:"d/m/Y"|default:"—" }}</p></div>
+        <div><p class="text-slate-500">Horas estimadas</p><p class="font-medium">{{ task.estimated_hours|default_if_none:"—" }}</p></div>
+        <div><p class="text-slate-500">Creada por</p><p class="font-medium">{{ task.created_by.get_full_name|default:task.created_by.username|default:"—" }}</p></div>
+      </div>
+
+      {% if can_work %}
+      <form method="post" action="{% url 'task_status' task.pk %}" class="flex gap-2 pt-2 border-t">
+        {% csrf_token %}
+        <select name="status" class="flex-1 border border-slate-300 rounded px-2 py-1.5">
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if value == task.status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button class="bg-slate-800 text-white px-3 rounded">Cambiar</button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if task.blocked_by.all or task.blocking.all %}
+    <div class="bg-white rounded-lg shadow p-5 text-sm">
+      <h2 class="font-semibold mb-2">Dependencias</h2>
+      {% if task.blocked_by.all %}
+        <p class="text-slate-500">Depende de:</p>
+        <ul class="mb-3 list-disc list-inside">
+          {% for b in task.blocked_by.all %}
+            <li><a href="{{ b.get_absolute_url }}" class="text-blue-700 hover:underline">{{ b.title }}</a>
+              <span class="text-xs text-slate-500">({{ b.get_status_display }})</span></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if task.blocking.all %}
+        <p class="text-slate-500">Bloquea a:</p>
+        <ul class="list-disc list-inside">
+          {% for b in task.blocking.all %}
+            <li><a href="{{ b.get_absolute_url }}" class="text-blue-700 hover:underline">{{ b.title }}</a></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div id="attachments" class="bg-white rounded-lg shadow p-5">
+      {% include "tasks/partials/attachments.html" %}
+    </div>
+  </div>
+</div>
+{% endblock %}

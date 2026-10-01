@@ -1,0 +1,36 @@
+<h2 class="font-semibold mb-3">Subtareas {% if subtasks %}({{ sub_done }}/{{ subtasks|length }}){% endif %}</h2>
+<ul class="divide-y">
+  {% for s in subtasks %}
+  <li class="py-2 flex items-center justify-between text-sm">
+    <div class="flex items-center gap-2">
+      {% if can_work %}
+        <button hx-post="{% url 'subtask_toggle' task.pk s.pk %}" hx-target="#subtasks"
+                class="h-5 w-5 rounded border flex items-center justify-center text-xs
+                {% if s.status == 'done' %}bg-green-500 border-green-500 text-white{% else %}border-slate-400{% endif %}"
+                title="Marcar como {% if s.status == 'done' %}pendiente{% else %}hecha{% endif %}">
+          {% if s.status == 'done' %}✓{% endif %}
+        </button>
+      {% else %}
+        <span class="h-5 w-5 rounded border flex items-center justify-center text-xs
+              {% if s.status == 'done' %}bg-green-500 border-green-500 text-white{% else %}border-slate-300{% endif %}">
+          {% if s.status == 'done' %}✓{% endif %}
+        </span>
+      {% endif %}
+      <span class="{% if s.status == 'done' %}line-through text-slate-400{% endif %}">{{ s.title }}</span>
+    </div>
+    {% if can_work %}
+      <button hx-post="{% url 'subtask_delete' task.pk s.pk %}" hx-target="#subtasks"
+              hx-confirm="¿Eliminar esta subtarea?" class="text-xs text-red-600 hover:underline">Quitar</button>
+    {% endif %}
+  </li>
+  {% empty %}
+  <li class="py-2 text-sm text-slate-500">Esta tarea no tiene subtareas.</li>
+  {% endfor %}
+</ul>
+
+{% if can_work and subtask_form %}
+<form hx-post="{% url 'subtask_add' task.pk %}" hx-target="#subtasks" class="mt-4 space-y-2 border-t pt-4">
+  {% include "includes/form_fields.html" with form=subtask_form %}
+  <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Agregar subtarea</button>
+</form>
+{% endif %}

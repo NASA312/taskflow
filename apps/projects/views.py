@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from apps.tasks.models import Task
 
 from apps.core.mixins import CompanyRequiredMixin, RoleRequiredMixin
 from .forms import ProjectForm, ProjectMemberForm
@@ -75,6 +76,20 @@ class ProjectDetailView(ProjectQuerysetMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx.update(_members_ctx(self.object, self.request.user))
+
+        counts = dict(
+            Task.objects.alive()
+            .filter(project=self.object, parent__isnull=True)
+            .order_by()
+            .values_list("status")
+            .annotate(n=Count("id"))
+        )
+        total = sum(counts.values())
+        done = counts.get(Task.Status.DONE, 0)
+        ctx["task_counts"] = [(label, counts.get(value, 0)) for value, label in Task.Status.choices]
+        ctx["task_total"] = total
+        ctx["task_done"] = done
+        ctx["progress"] = round(done * 100 / total) if total else 0
         return ctx
 
 

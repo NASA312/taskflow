@@ -35,8 +35,24 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-5">
-      <h2 class="font-semibold mb-2">Tareas</h2>
-      <p class="text-sm text-slate-500">Aquí aparecerá el tablero Kanban en la Fase 3.</p>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-semibold">Tareas</h2>
+        <a href="{% url 'project_board' project.pk %}"
+           class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm">Abrir tablero</a>
+      </div>
+      {% if task_total %}
+        <div class="w-full bg-slate-200 rounded-full h-2 mb-1">
+          <div class="bg-green-500 h-2 rounded-full" style="width: {{ progress }}%"></div>
+        </div>
+        <p class="text-xs text-slate-500 mb-4">{{ progress }}% completado ({{ task_done }} de {{ task_total }} tareas)</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
+          {% for label, n in task_counts %}
+            <div class="bg-slate-50 rounded p-2"><p class="text-xl font-bold">{{ n }}</p><p class="text-xs text-slate-500">{{ label }}</p></div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-sm text-slate-500">Aún no hay tareas en este proyecto.</p>
+      {% endif %}
     </div>
   </div>
 
