@@ -5,6 +5,13 @@ from apps.companies.models import Team
 from apps.core.forms import TailwindFormMixin
 from .models import Invitation, User
 
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm, UserCreationForm
+from django.core.mail import send_mail
+from django.template import loader
+
+from apps.notifications.services import safe_delay
+from apps.notifications.tasks import send_plain_email
+
 
 class InvitationForm(TailwindFormMixin, forms.ModelForm):
     class Meta:
@@ -38,3 +45,17 @@ class AcceptInvitationForm(TailwindFormMixin, UserCreationForm):
         super().__init__(*args, **kwargs)
         self.fields["first_name"].required = True
         self.fields["last_name"].required = True
+        
+class AsyncPasswordResetForm(TailwindFormMixin, PasswordResetForm):
+    """Igual que el de Django, pero el correo sale por Celery."""
+
+    def send_mail(self, subject_template_name, email_template_name, context,
+                  from_email, to_email, html_email_template_name=None):
+        subject = "".join(loader.render_to_string(subject_template_name, context).splitlines())
+        body = loader.render_to_string(email_template_name, context)
+        if not safe_delay(send_plain_email, subject, body, to_email):
+            send_mail(subject, body, from_email, [to_email])     # respaldo si Redis no responde
+
+
+class TailwindSetPasswordForm(TailwindFormMixin, SetPasswordForm):
+    pass

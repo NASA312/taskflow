@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Preferencias · TaskFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white rounded-xl shadow p-8">
+  <h1 class="text-xl font-bold mb-1">Preferencias de notificaciones</h1>
+  <p class="text-sm text-slate-600 mb-4">
+    Siempre verás las notificaciones en la campana. Aquí eliges cuáles quieres recibir también por correo.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="divide-y">
+      {% for field in form %}
+        <label class="flex items-center gap-3 py-3 text-sm cursor-pointer">
+          {{ field }}
+          <span>{{ field.label }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    <button class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">Guardar</button>
+  </form>
+</div>
+{% endblock %}

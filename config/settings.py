@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.projects",
     "apps.tasks",
     "apps.reports",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -129,3 +130,32 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_FROM_EMAIL = "TaskFlow <no-reply@taskflow.local>"
 INVITATION_EXPIRY_DAYS = 7
 MAX_UPLOAD_MB = 10
+
+# ---------- Celery / Redis ----------
+from celery.schedules import crontab
+
+CELERY_BROKER_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_EAGER", default=False)
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TASK_TIME_LIMIT = 300
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# Si Redis no responde, falla rápido en vez de colgar la petición
+CELERY_TASK_PUBLISH_RETRY_POLICY = {
+    "max_retries": 2, "interval_start": 0, "interval_step": 0.2, "interval_max": 0.5,
+}
+
+CELERY_BEAT_SCHEDULE = {
+    "recordatorios-de-fechas-limite": {
+        "task": "apps.notifications.tasks.send_deadline_reminders",
+        "schedule": crontab(hour=8, minute=0),                      # todos los días 8:00
+    },
+    "limpieza-de-notificaciones": {
+        "task": "apps.notifications.tasks.cleanup_old_notifications",
+        "schedule": crontab(hour=3, minute=30, day_of_week="sun"),  # domingos 3:30
+    },
+}
+
+# ---------- Notificaciones ----------
+SITE_URL = env("SITE_URL", default="http://localhost:8000")
+DEADLINE_REMINDER_DAYS = 2      # avisar cuando falten 2 días o menos

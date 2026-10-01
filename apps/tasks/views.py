@@ -19,6 +19,7 @@ from apps.projects.views import ProjectQuerysetMixin
 from .forms import AttachmentForm, CommentForm, SubtaskForm, TaskForm, TimeLogForm
 from .models import Attachment, Comment, Task, TimeLog
 from .services import MoveError, apply_filters, apply_move
+from apps.notifications.services import notify_assigned, notify_comment, notify_status_change
 
 User = get_user_model()
 
@@ -183,7 +184,9 @@ class TaskCreateView(SuccessMessageMixin, CompanyRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.project = self.project
         form.instance.created_by = self.request.user
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        notify_assigned(self.object, form.cleaned_data["assignees"], self.request.user)
+        return response
 
     def get_success_url(self):
         return reverse("project_board", args=[self.project.pk])
@@ -233,6 +236,15 @@ class TaskUpdateView(SuccessMessageMixin, TaskManageMixin, UpdateView):
         ctx = super().get_context_data(**kwargs)
         ctx["project"] = self.object.project
         return ctx
+    
+    def form_valid(self, form):
+        before = set(self.object.assignees.values_list("pk", flat=True))
+        response = super().form_valid(form)
+        new_users = [u for u in form.cleaned_data["assignees"] if u.pk not in before]
+        notify_assigned(self.object, new_users, self.request.user)
+        if "status" in form.changed_data:
+            notify_status_change(self.object, self.request.user, form.initial["status"])
+        return response
 
 
 class TaskDeleteView(TaskManageMixin, DeleteView):
@@ -348,6 +360,7 @@ class CommentAddView(_TaskActionView):
             comment.task = task
             comment.author = request.user
             comment.save()
+            notify_comment(comment)
             form = None
         return render(request, "tasks/partials/comments.html", comments_ctx(task, request.user, form))
 
