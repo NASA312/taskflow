@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Attachment, Comment, Task
+from .models import Attachment, Comment, Task, TimeLog
+
+admin.site.register(TimeLog)
 
 
 class CommentInline(admin.TabularInline):

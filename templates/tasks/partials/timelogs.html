@@ -1,0 +1,39 @@
+<h2 class="font-semibold mb-1">Tiempo registrado</h2>
+<p class="text-sm text-slate-600 mb-2">
+  <strong>{{ total_hours|floatformat:2 }} h</strong>
+  {% if task.estimated_hours %}de {{ task.estimated_hours|floatformat:2 }} h estimadas ({{ hours_pct }}%){% endif %}
+</p>
+{% if task.estimated_hours %}
+  <div class="w-full bg-slate-200 rounded-full h-2 mb-4">
+    <div class="h-2 rounded-full {% if hours_pct > 100 %}bg-red-500{% else %}bg-blue-500{% endif %}"
+         style="width: {{ hours_pct_bar }}%"></div>
+  </div>
+{% endif %}
+
+<ul class="divide-y text-sm">
+  {% for l in time_logs %}
+  <li class="py-2 flex items-center justify-between gap-2">
+    <div>
+      <p><span class="font-medium">{{ l.hours|floatformat:2 }} h</span>
+        · {{ l.user.get_full_name|default:l.user.username|default:"Usuario eliminado" }}
+        <span class="text-xs text-slate-500">· {{ l.date|date:"d/m/Y" }}</span></p>
+      {% if l.description %}<p class="text-xs text-slate-500">{{ l.description }}</p>{% endif %}
+    </div>
+    {% if can_manage or l.user_id == user.id %}
+      <button hx-post="{% url 'timelog_delete' task.pk l.pk %}" hx-target="#timelogs"
+              hx-confirm="¿Eliminar este registro de horas?"
+              class="text-xs text-red-600 hover:underline">Eliminar</button>
+    {% endif %}
+  </li>
+  {% empty %}
+  <li class="py-2 text-slate-500">Aún no hay horas registradas.</li>
+  {% endfor %}
+</ul>
+
+{% if can_participate and timelog_form %}
+<form hx-post="{% url 'timelog_add' task.pk %}" hx-target="#timelogs"
+      class="mt-4 space-y-2 border-t pt-4">
+  {% include "includes/form_fields.html" with form=timelog_form %}
+  <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Registrar horas</button>
+</form>
+{% endif %}

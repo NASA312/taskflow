@@ -4,7 +4,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
+from apps.tasks.models import Task, TimeLog
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse_lazy
@@ -86,6 +87,9 @@ class ProjectDetailView(ProjectQuerysetMixin, DetailView):
         )
         total = sum(counts.values())
         done = counts.get(Task.Status.DONE, 0)
+        alive_tasks = Task.objects.alive().filter(project=self.object, parent__isnull=True)
+        ctx["hours_estimated"] = alive_tasks.aggregate(t=Sum("estimated_hours"))["t"] or 0
+        ctx["hours_logged"] = TimeLog.objects.filter(task__in=alive_tasks).aggregate(t=Sum("hours"))["t"] or 0
         ctx["task_counts"] = [(label, counts.get(value, 0)) for value, label in Task.Status.choices]
         ctx["task_total"] = total
         ctx["task_done"] = done

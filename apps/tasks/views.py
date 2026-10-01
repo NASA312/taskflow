@@ -2,7 +2,9 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, F, Q
+from decimal import Decimal
+from django.db.models import Count, F, Q, Sum 
+from django.utils import timezone
 from django.http import FileResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,8 +16,8 @@ from django.db.models import Prefetch
 from apps.core.mixins import CompanyRequiredMixin
 from apps.projects.models import Project
 from apps.projects.views import ProjectQuerysetMixin
-from .forms import AttachmentForm, CommentForm, SubtaskForm, TaskForm
-from .models import Attachment, Comment, Task
+from .forms import AttachmentForm, CommentForm, SubtaskForm, TaskForm, TimeLogForm
+from .models import Attachment, Comment, Task, TimeLog
 from .services import MoveError, apply_filters, apply_move
 
 User = get_user_model()
@@ -62,7 +64,23 @@ def attachments_ctx(task, user, form=None):
         "attachment_form": form or (AttachmentForm() if can_participate else None),
     }
 
-
+def timelogs_ctx(task, user, form=None):
+    can_participate = task.project.user_can_participate(user)
+    logs = list(task.time_logs.select_related("user"))
+    total = sum((log.hours for log in logs), Decimal("0"))
+    pct = int(total * 100 / task.estimated_hours) if task.estimated_hours else 0
+    return {
+        "task": task,
+        "time_logs": logs,
+        "total_hours": total,
+        "hours_pct": pct,
+        "hours_pct_bar": min(pct, 100),
+        "can_manage": task.project.user_can_manage(user),
+        "can_participate": can_participate,
+        "timelog_form": form or (
+            TimeLogForm(initial={"date": timezone.localdate()}) if can_participate else None
+        ),
+    }
 # ---------- Tablero ----------
 
 class ProjectBoardView(ProjectQuerysetMixin, DetailView):
@@ -197,6 +215,7 @@ class TaskDetailView(CompanyRequiredMixin, DetailView):
         ctx.update(subtasks_ctx(task, user))
         ctx.update(comments_ctx(task, user))
         ctx.update(attachments_ctx(task, user))
+        ctx.update(timelogs_ctx(task, user))
         return ctx
 
 
@@ -379,3 +398,27 @@ class AttachmentDownloadView(CompanyRequiredMixin, View):
         task = get_task_or_404(request.user, pk)
         attachment = get_object_or_404(task.attachments, pk=attachment_pk)
         return FileResponse(attachment.file.open("rb"), as_attachment=True, filename=attachment.filename)
+
+class TimeLogAddView(_TaskActionView):
+    def post(self, request, pk):
+        task = self.get_task(pk)
+        if not task.project.user_can_participate(request.user):
+            raise PermissionDenied
+        form = TimeLogForm(request.POST)
+        if form.is_valid():
+            log = form.save(commit=False)
+            log.task = task
+            log.user = request.user
+            log.save()
+            form = None
+        return render(request, "tasks/partials/timelogs.html", timelogs_ctx(task, request.user, form))
+
+
+class TimeLogDeleteView(_TaskActionView):
+    def post(self, request, pk, log_pk):
+        task = self.get_task(pk)
+        log = get_object_or_404(task.time_logs, pk=log_pk)
+        if not (task.project.user_can_manage(request.user) or log.user_id == request.user.pk):
+            raise PermissionDenied
+        log.delete()
+        return render(request, "tasks/partials/timelogs.html", timelogs_ctx(task, request.user))

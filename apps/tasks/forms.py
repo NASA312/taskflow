@@ -3,10 +3,11 @@ from pathlib import Path
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from apps.core.forms import TailwindFormMixin
 from apps.projects.models import ProjectMember
-from .models import Attachment, Comment, Task
+from .models import Attachment, Comment, Task, TimeLog
 
 User = get_user_model()
 
@@ -94,3 +95,19 @@ class AttachmentForm(TailwindFormMixin, forms.ModelForm):
         if Path(f.name).suffix.lower() in BLOCKED_EXTENSIONS:
             raise forms.ValidationError("Este tipo de archivo no está permitido.")
         return f
+    
+class TimeLogForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = TimeLog
+        fields = ["date", "hours", "description"]
+        widgets = {
+            "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "hours": forms.NumberInput(attrs={"step": "0.25", "min": "0.25"}),
+        }
+        labels = {"description": "¿Qué hiciste? (opcional)"}
+
+    def clean_date(self):
+        value = self.cleaned_data["date"]
+        if value > timezone.localdate():
+            raise forms.ValidationError("No puedes registrar horas en una fecha futura.")
+        return value

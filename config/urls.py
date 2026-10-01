@@ -13,6 +13,7 @@ urlpatterns = [
     path("", include("apps.core.urls")),
     path("", include("apps.companies.urls")),
     path("", include("apps.tasks.urls")),
+    path("", include("apps.reports.urls")),
 ]
 
 if settings.DEBUG:

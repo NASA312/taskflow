@@ -7,6 +7,8 @@ from django.db import models
 from django.db.models import Max
 from django.urls import reverse
 from django.utils import timezone
+from decimal import Decimal
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 from apps.core.models import SoftDeleteModel, SoftDeleteQuerySet, TimeStampedModel
 from apps.projects.models import Project
@@ -161,3 +163,28 @@ class Attachment(models.Model):
 
     def __str__(self):
         return self.filename
+    
+class TimeLog(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="time_logs")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="time_logs"
+    )
+    date = models.DateField("Fecha", default=timezone.localdate)
+    hours = models.DecimalField(
+        "Horas", max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("24"))],
+    )
+    description = models.CharField("Descripción", max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Registro de horas"
+        verbose_name_plural = "Registros de horas"
+        ordering = ["-date", "-id"]
+        indexes = [
+            models.Index(fields=["task", "date"]),
+            models.Index(fields=["user", "date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.hours} h en {self.task}"

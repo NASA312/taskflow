@@ -22,4 +22,7 @@ urlpatterns = [
     path("tareas/<int:pk>/adjuntos/agregar/", views.AttachmentAddView.as_view(), name="attachment_add"),
     path("tareas/<int:pk>/adjuntos/<int:attachment_pk>/descargar/", views.AttachmentDownloadView.as_view(), name="attachment_download"),
     path("tareas/<int:pk>/adjuntos/<int:attachment_pk>/eliminar/", views.AttachmentDeleteView.as_view(), name="attachment_delete"),
+    
+    path("tareas/<int:pk>/horas/agregar/", views.TimeLogAddView.as_view(), name="timelog_add"),
+    path("tareas/<int:pk>/horas/<int:log_pk>/eliminar/", views.TimeLogDeleteView.as_view(), name="timelog_delete"),
 ]

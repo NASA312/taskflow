@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Reportes · TaskFlow{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+  <div>
+    <h1 class="text-2xl font-bold">Reportes</h1>
+    <p class="text-sm text-slate-500">{{ report.scope }}</p>
+  </div>
+  <div class="flex gap-2 text-sm">
+    <a href="{% url 'report_pdf' %}{{ query }}" class="bg-white border px-4 py-2 rounded hover:bg-slate-50">Exportar PDF</a>
+    <a href="{% url 'report_excel' %}{{ query }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Exportar Excel</a>
+  </div>
+</div>
+
+<form method="get" class="mb-6">
+  <select name="project" onchange="this.form.submit()"
+          class="border border-slate-300 rounded px-3 py-2 text-sm">
+    <option value="">Todos los proyectos</option>
+    {% for p in projects %}
+      <option value="{{ p.pk }}" {% if project and project.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+  <div class="bg-white rounded-lg shadow p-5">
+    <p class="text-sm text-slate-500">Avance global</p>
+    <p class="text-3xl font-bold">{{ report.summary.progress }}%</p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-5">
+    <p class="text-sm text-slate-500">Tareas completadas</p>
+    <p class="text-3xl font-bold">{{ report.summary.done }}<span class="text-lg text-slate-400"> / {{ report.summary.total }}</span></p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-5">
+    <p class="text-sm text-slate-500">Atrasadas</p>
+    <p class="text-3xl font-bold {% if report.summary.overdue %}text-red-600{% endif %}">{{ report.summary.overdue }}</p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-5">
+    <p class="text-sm text-slate-500">Puntualidad</p>
+    <p class="text-3xl font-bold">{% if report.summary.punctuality is not None %}{{ report.summary.punctuality }}%{% else %}—{% endif %}</p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-5">
+    <p class="text-sm text-slate-500">Horas (reg. / est.)</p>
+    <p class="text-3xl font-bold">{{ report.summary.logged|floatformat:1 }}<span class="text-lg text-slate-400"> / {{ report.summary.estimated|floatformat:1 }}</span></p>
+  </div>
+</div>
+
+{% if not report.summary.total %}
+  <div class="bg-white rounded-lg shadow p-8 mt-6 text-center text-slate-500">
+    Todavía no hay tareas para analizar. Crea tareas en el tablero y vuelve aquí.
+  </div>
+{% else %}
+  {{ chart_data|json_script:"chart-data" }}
+
+  <div class="grid lg:grid-cols-2 gap-6 mt-6">
+    <div class="bg-white rounded-lg shadow p-5">
+      <h2 class="font-semibold mb-3">Tareas por estado</h2>
+      <div class="relative h-64"><canvas id="c-status"></canvas></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+      <h2 class="font-semibold mb-3">Entregas a tiempo vs. con retraso</h2>
+      <div class="relative h-64"><canvas id="c-punct"></canvas></div>
+      {% if not report.summary.on_time and not report.summary.late %}
+        <p class="text-xs text-slate-500 mt-2">Aún no hay tareas terminadas con fecha límite.</p>
+      {% endif %}
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+      <h2 class="font-semibold mb-3">Rendimiento por persona</h2>
+      <div class="relative h-64"><canvas id="c-emp"></canvas></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5">
+      <h2 class="font-semibold mb-3">Horas estimadas vs. registradas</h2>
+      <div class="relative h-64"><canvas id="c-hours"></canvas></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-5 lg:col-span-2">
+      <h2 class="font-semibold mb-3">Horas registradas por semana</h2>
+      <div class="relative h-64"><canvas id="c-weeks"></canvas></div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="bg-white rounded-lg shadow overflow-x-auto mt-6">
+  <h2 class="font-semibold p-5 pb-3">Proyectos</h2>
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-left text-slate-500">
+      <tr>
+        <th class="px-4 py-3">Proyecto</th><th class="px-4 py-3">Estado</th><th class="px-4 py-3">Avance</th>
+        <th class="px-4 py-3">Atrasadas</th><th class="px-4 py-3">Horas est.</th><th class="px-4 py-3">Horas reg.</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for p in report.projects %}
+      <tr>
+        <td class="px-4 py-3 font-medium">{{ p.name }}</td>
+        <td class="px-4 py-3">{{ p.status }}</td>
+        <td class="px-4 py-3">{{ p.progress }}% <span class="text-xs text-slate-400">({{ p.done }}/{{ p.total }})</span></td>
+        <td class="px-4 py-3 {% if p.overdue %}text-red-600 font-medium{% endif %}">{{ p.overdue }}</td>
+        <td class="px-4 py-3">{{ p.estimated|floatformat:2 }}</td>
+        <td class="px-4 py-3 {% if p.logged > p.estimated and p.estimated %}text-red-600 font-medium{% endif %}">{{ p.logged|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">Sin proyectos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto mt-6">
+  <h2 class="font-semibold p-5 pb-3">Rendimiento por persona</h2>
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-left text-slate-500">
+      <tr>
+        <th class="px-4 py-3">Persona</th><th class="px-4 py-3">Asignadas</th><th class="px-4 py-3">Hechas</th>
+        <th class="px-4 py-3">Pendientes</th><th class="px-4 py-3">Atrasadas</th><th class="px-4 py-3">A tiempo</th>
+        <th class="px-4 py-3">Con retraso</th><th class="px-4 py-3">Puntualidad</th><th class="px-4 py-3">Horas</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for e in report.employees %}
+      <tr>
+        <td class="px-4 py-3 font-medium">{{ e.name }}</td>
+        <td class="px-4 py-3">{{ e.assigned }}</td>
+        <td class="px-4 py-3">{{ e.done }}</td>
+        <td class="px-4 py-3">{{ e.pending }}</td>
+        <td class="px-4 py-3 {% if e.overdue %}text-red-600 font-medium{% endif %}">{{ e.overdue }}</td>
+        <td class="px-4 py-3">{{ e.on_time }}</td>
+        <td class="px-4 py-3">{{ e.late }}</td>
+        <td class="px-4 py-3">{% if e.punctuality is not None %}{{ e.punctuality }}%{% else %}—{% endif %}</td>
+        <td class="px-4 py-3">{{ e.hours|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="px-4 py-6 text-center text-slate-500">Aún no hay tareas asignadas ni horas registradas.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if report.summary.total %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const d = JSON.parse(document.getElementById("chart-data").textContent);
+  const base = { responsive: true, maintainAspectRatio: false };
+  const intTicks = { beginAtZero: true, ticks: { precision: 0 } };
+  const el = (id) => document.getElementById(id);
+
+  new Chart(el("c-status"), {
+    type: "doughnut",
+    data: { labels: d.status.labels, datasets: [{ data: d.status.values,
+      backgroundColor: ["#94a3b8", "#3b82f6", "#f59e0b", "#22c55e"] }] },
+    options: base,
+  });
+
+  new Chart(el("c-punct"), {
+    type: "doughnut",
+    data: { labels: d.punctuality.labels, datasets: [{ data: d.punctuality.values,
+      backgroundColor: ["#22c55e", "#ef4444"] }] },
+    options: base,
+  });
+
+  new Chart(el("c-emp"), {
+    type: "bar",
+    data: { labels: d.employees.labels, datasets: [
+      { label: "Hechas", data: d.employees.done, backgroundColor: "#22c55e" },
+      { label: "Pendientes", data: d.employees.pending, backgroundColor: "#f59e0b" },
+    ] },
+    options: { ...base, scales: { x: { stacked: true }, y: { ...intTicks, stacked: true } } },
+  });
+
+  new Chart(el("c-hours"), {
+    type: "bar",
+    data: { labels: d.projects.labels, datasets: [
+      { label: "Estimadas", data: d.projects.estimated, backgroundColor: "#94a3b8" },
+      { label: "Registradas", data: d.projects.logged, backgroundColor: "#3b82f6" },
+    ] },
+    options: { ...base, scales: { y: { beginAtZero: true } } },
+  });
+
+  new Chart(el("c-weeks"), {
+    type: "line",
+    data: { labels: d.weeks.labels, datasets: [
+      { label: "Horas", data: d.weeks.values, borderColor: "#3b82f6",
+        backgroundColor: "rgba(59,130,246,.15)", fill: true, tension: 0.3 },
+    ] },
+    options: { ...base, scales: { y: { beginAtZero: true } } },
+  });
+</script>
+{% endif %}
+{% endblock %}

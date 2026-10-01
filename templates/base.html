@@ -22,6 +22,9 @@
         {% if user.company %}
           <a href="{% url 'project_list' %}" class="text-sm text-slate-300 hover:text-white">Proyectos</a>
           <a href="{% url 'my_tasks' %}" class="text-sm text-slate-300 hover:text-white">Mis tareas</a>
+          {% if user.can_manage_projects %}
+            <a href="{% url 'report_dashboard' %}" class="text-sm text-slate-300 hover:text-white">Reportes</a>
+          {% endif %}
           {% if user.is_company_admin %}
             <a href="{% url 'team_list' %}" class="text-sm text-slate-300 hover:text-white">Equipo</a>
           {% endif %}

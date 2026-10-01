@@ -50,6 +50,18 @@
             <div class="bg-slate-50 rounded p-2"><p class="text-xl font-bold">{{ n }}</p><p class="text-xs text-slate-500">{{ label }}</p></div>
           {% endfor %}
         </div>
+            <div class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-semibold">Horas</h2>
+        {% if user.can_manage_projects %}
+          <a href="{% url 'report_dashboard' %}?project={{ project.pk }}" class="text-sm text-blue-600 hover:underline">Ver reporte</a>
+        {% endif %}
+      </div>
+      <div class="grid grid-cols-2 gap-3 text-center text-sm">
+        <div class="bg-slate-50 rounded p-3"><p class="text-xl font-bold">{{ hours_estimated|floatformat:2 }}</p><p class="text-xs text-slate-500">Estimadas</p></div>
+        <div class="bg-slate-50 rounded p-3"><p class="text-xl font-bold">{{ hours_logged|floatformat:2 }}</p><p class="text-xs text-slate-500">Registradas</p></div>
+      </div>
+    </div>
       {% else %}
         <p class="text-sm text-slate-500">Aún no hay tareas en este proyecto.</p>
       {% endif %}
