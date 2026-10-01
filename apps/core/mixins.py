@@ -2,20 +2,23 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 
 
-class CompanyQuerysetMixin(LoginRequiredMixin):
-    """
-    Para vistas de lista/detalle/edición/borrado.
-    Filtra SIEMPRE por la empresa del usuario en sesión.
-    El modelo debe tener un campo `company`.
-    """
+class CompanyRequiredMixin(LoginRequiredMixin):
+    """Exige sesión iniciada y que el usuario pertenezca a una empresa."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not request.user.company_id:
+            raise PermissionDenied("Tu usuario no pertenece a ninguna empresa.")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class CompanyQuerysetMixin(CompanyRequiredMixin):
+    """Para modelos con campo `company`: filtra siempre por la empresa del usuario."""
+
     def get_queryset(self):
-        qs = super().get_queryset()
-        if not self.request.user.company_id:
-            return qs.none()
-        return qs.filter(company=self.request.user.company)
+        return super().get_queryset().filter(company=self.request.user.company)
 
 
-class RoleRequiredMixin(LoginRequiredMixin):
+class RoleRequiredMixin(CompanyRequiredMixin):
     allowed_roles = ()
 
     def dispatch(self, request, *args, **kwargs):

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} · TaskFlow{% endblock %}
+
+{% block content %}
+<a href="{% url 'project_list' %}" class="text-sm text-blue-600 hover:underline">← Proyectos</a>
+
+<div class="flex justify-between items-start mt-2 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold">{{ project.name }}</h1>
+    <div class="mt-1 flex items-center gap-2">
+      {% include "projects/partials/status_badge.html" %}
+      {% if project.is_overdue %}<span class="text-xs text-red-600 font-medium">Atrasado</span>{% endif %}
+    </div>
+  </div>
+  {% if can_manage %}
+  <div class="flex gap-2">
+    <a href="{% url 'project_update' project.pk %}" class="bg-white border px-3 py-2 rounded text-sm hover:bg-slate-50">Editar</a>
+    <a href="{% url 'project_delete' project.pk %}" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm">Eliminar</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <div class="lg:col-span-2 space-y-6">
+    <div class="bg-white rounded-lg shadow p-5">
+      <dl class="grid sm:grid-cols-2 gap-4 text-sm">
+        <div><dt class="text-slate-500">Cliente</dt><dd class="font-medium">{{ project.client_name|default:"—" }}</dd></div>
+        <div><dt class="text-slate-500">Presupuesto</dt><dd class="font-medium">{% if project.budget %}${{ project.budget|floatformat:2 }}{% else %}—{% endif %}</dd></div>
+        <div><dt class="text-slate-500">Inicio</dt><dd class="font-medium">{{ project.start_date|date:"d/m/Y"|default:"—" }}</dd></div>
+        <div><dt class="text-slate-500">Cierre estimado</dt><dd class="font-medium">{{ project.end_date|date:"d/m/Y"|default:"—" }}</dd></div>
+      </dl>
+      {% if project.description %}
+        <p class="mt-4 text-slate-700 whitespace-pre-line">{{ project.description }}</p>
+      {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-5">
+      <h2 class="font-semibold mb-2">Tareas</h2>
+      <p class="text-sm text-slate-500">Aquí aparecerá el tablero Kanban en la Fase 3.</p>
+    </div>
+  </div>
+
+  <div id="members" class="bg-white rounded-lg shadow p-5 h-fit">
+    {% include "projects/partials/members.html" %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Proyectos · TaskFlow{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+  <h1 class="text-2xl font-bold">Proyectos</h1>
+  {% if user.can_manage_projects %}
+    <a href="{% url 'project_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Nuevo proyecto</a>
+  {% endif %}
+</div>
+
+<form method="get" class="flex gap-2 mb-4">
+  <input name="q" value="{{ q }}" placeholder="Buscar por nombre o cliente"
+         class="flex-1 border border-slate-300 rounded px-3 py-2">
+  <select name="status" class="border border-slate-300 rounded px-3 py-2">
+    <option value="">Todos los estados</option>
+    {% for value, label in statuses %}
+      <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="bg-slate-800 text-white px-4 rounded">Filtrar</button>
+</form>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-slate-50 text-left text-slate-500">
+      <tr>
+        <th class="px-4 py-3">Proyecto</th>
+        <th class="px-4 py-3">Cliente</th>
+        <th class="px-4 py-3">Estado</th>
+        <th class="px-4 py-3">Cierre estimado</th>
+        <th class="px-4 py-3">Miembros</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y">
+      {% for p in projects %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3"><a href="{{ p.get_absolute_url }}" class="text-blue-700 font-medium hover:underline">{{ p.name }}</a></td>
+        <td class="px-4 py-3">{{ p.client_name|default:"—" }}</td>
+        <td class="px-4 py-3">{% include "projects/partials/status_badge.html" with project=p %}</td>
+        <td class="px-4 py-3">
+          {{ p.end_date|date:"d/m/Y"|default:"—" }}
+          {% if p.is_overdue %}<span class="ml-1 text-xs text-red-600 font-medium">Atrasado</span>{% endif %}
+        </td>
+        <td class="px-4 py-3">{{ p.member_count }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-8 text-center text-slate-500">No hay proyectos que mostrar.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<div class="flex justify-between mt-4 text-sm">
+  {% if page_obj.has_previous %}
+    <a class="text-blue-600" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ status }}">← Anterior</a>
+  {% else %}<span></span>{% endif %}
+  <span class="text-slate-500">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a class="text-blue-600" href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ status }}">Siguiente →</a>
+  {% else %}<span></span>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

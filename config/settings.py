@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.companies",
     "apps.accounts",
+    "apps.projects",
 ]
 
 MIDDLEWARE = [
@@ -122,3 +123,6 @@ LOGOUT_REDIRECT_URL = "login"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+DEFAULT_FROM_EMAIL = "TaskFlow <no-reply@taskflow.local>"
+INVITATION_EXPIRY_DAYS = 7

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta · TaskFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10 bg-white rounded-xl shadow p-8">
+  <h1 class="text-2xl font-bold mb-1">Crea tu cuenta</h1>
+  <p class="text-sm text-slate-600 mb-6">
+    Te invitaron a <strong>{{ invitation.company.name }}</strong> como {{ invitation.get_role_display }}.
+    Tu correo será <strong>{{ invitation.email }}</strong>.
+  </p>
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" %}
+    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded">Crear cuenta</button>
+  </form>
+</div>
+{% endblock %}

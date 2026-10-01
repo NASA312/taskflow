@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Editar{% else %}Nuevo{% endif %} proyecto · TaskFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white rounded-xl shadow p-8">
+  <h1 class="text-xl font-bold mb-6">{% if object %}Editar proyecto{% else %}Nuevo proyecto{% endif %}</h1>
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" %}
+    <div class="flex gap-3 pt-2">
+      <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">Guardar</button>
+      <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'project_list' %}{% endif %}"
+         class="px-5 py-2 rounded border hover:bg-slate-50">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
