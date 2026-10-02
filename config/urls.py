@@ -26,6 +26,8 @@ urlpatterns = [
     path("", include("apps.reports.urls")),
     path("", include("apps.notifications.urls")),
     path("", include("apps.core.urls")),
+    path("", include("apps.planning.urls")),
+    path("", include("apps.activity.urls")),
 ]
 
 if settings.DEBUG:

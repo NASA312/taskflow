@@ -6,9 +6,12 @@
 
 <div class="flex justify-between items-center mt-2 mb-4">
   <h1 class="text-2xl font-bold">Tablero</h1>
-  {% if can_manage %}
-    <a href="{% url 'task_create' project.pk %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Nueva tarea</a>
-  {% endif %}
+  <div class="flex gap-2 text-sm">
+    <a href="{% url 'project_gantt' project.pk %}" class="bg-white border px-4 py-2 rounded hover:bg-slate-50">Ver Gantt</a>
+    {% if can_manage %}
+      <a href="{% url 'task_create' project.pk %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Nueva tarea</a>
+    {% endif %}
+  </div>
 </div>
 
 <form method="get" class="grid sm:grid-cols-2 lg:grid-cols-6 gap-2 mb-4 text-sm">

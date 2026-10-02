@@ -3,6 +3,8 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 from apps.notifications.services import notify_status_change
+from apps.activity.models import Activity
+from apps.activity.services import record
 
 from .models import Task
 
@@ -57,6 +59,11 @@ def apply_move(task, user, status, order_ids):
             task.status = status
             task.save()
             notify_status_change(task, user, old_status)
+            record(
+                user, Activity.Verb.STATUS, task.project,
+                f"movió «{task.title}» de {Task.Status(old_status).label} a {Task.Status(status).label}",
+                task=task,
+            )
         # Solo se reordenan tareas del MISMO proyecto
         valid = set(
             Task.objects.alive()

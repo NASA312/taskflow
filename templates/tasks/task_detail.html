@@ -100,6 +100,12 @@
     <div id="attachments" class="bg-white rounded-lg shadow p-5">
       {% include "tasks/partials/attachments.html" %}
     </div>
+        {% if show_activity %}
+    <div id="activity" class="bg-white rounded-lg shadow p-5">
+      <h2 class="font-semibold mb-2">Actividad</h2>
+      {% include "activity/partials/feed.html" with show_project=False show_task_link=False %}
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

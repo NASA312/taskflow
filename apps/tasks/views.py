@@ -20,6 +20,10 @@ from .forms import AttachmentForm, CommentForm, SubtaskForm, TaskForm, TimeLogFo
 from .models import Attachment, Comment, Task, TimeLog
 from .services import MoveError, apply_filters, apply_move
 from apps.notifications.services import notify_assigned, notify_comment, notify_status_change
+from apps.activity.models import Activity
+from apps.activity.services import changed_fields, record
+
+V = Activity.Verb      # junto a: User = get_user_model()
 
 User = get_user_model()
 
@@ -186,6 +190,7 @@ class TaskCreateView(SuccessMessageMixin, CompanyRequiredMixin, CreateView):
         form.instance.created_by = self.request.user
         response = super().form_valid(form)
         notify_assigned(self.object, form.cleaned_data["assignees"], self.request.user)
+        record(self.request.user, V.CREATED, self.project, f"creó la tarea «{self.object.title}»", task=self.object)
         return response
 
     def get_success_url(self):
@@ -219,6 +224,8 @@ class TaskDetailView(CompanyRequiredMixin, DetailView):
         ctx.update(comments_ctx(task, user))
         ctx.update(attachments_ctx(task, user))
         ctx.update(timelogs_ctx(task, user))
+        ctx["show_activity"] = user.role != user.Role.CLIENT
+        ctx["activities"] = Activity.objects.for_user(user).filter(task=task).select_related("actor")[:15]
         return ctx
 
 
@@ -238,12 +245,18 @@ class TaskUpdateView(SuccessMessageMixin, TaskManageMixin, UpdateView):
         return ctx
     
     def form_valid(self, form):
+        changed = changed_fields(form)
         before = set(self.object.assignees.values_list("pk", flat=True))
         response = super().form_valid(form)
         new_users = [u for u in form.cleaned_data["assignees"] if u.pk not in before]
         notify_assigned(self.object, new_users, self.request.user)
         if "status" in form.changed_data:
             notify_status_change(self.object, self.request.user, form.initial["status"])
+        if changed:
+            record(
+                self.request.user, V.UPDATED, self.object.project,
+                f"editó la tarea «{self.object.title}» ({changed})", task=self.object,
+            )
         return response
 
 
@@ -259,6 +272,10 @@ class TaskDeleteView(TaskManageMixin, DeleteView):
         return reverse("project_board", args=[self.object.project_id])
 
     def form_valid(self, form):
+        record(
+            self.request.user, V.DELETED, self.object.project,
+            f"eliminó la tarea «{self.object.title}»", task=self.object,
+        )
         self.object.soft_delete()
         messages.success(self.request, "Tarea eliminada.")
         return HttpResponseRedirect(self.get_success_url())
@@ -321,10 +338,12 @@ class SubtaskAddView(_TaskActionView):
             raise PermissionDenied
         form = SubtaskForm(request.POST)
         if form.is_valid():
-            Task.objects.create(
+            sub = Task.objects.create(
                 project=task.project, parent=task,
                 title=form.cleaned_data["title"], created_by=request.user,
             )
+            record(request.user, V.SUBTASK, task.project,
+                   f"agregó la subtarea «{sub.title}» en «{task.title}»", task=task)
             form = None
         return render(request, "tasks/partials/subtasks.html", subtasks_ctx(task, request.user, form))
 
@@ -337,6 +356,9 @@ class SubtaskToggleView(_TaskActionView):
         sub = get_object_or_404(task.subtasks.alive(), pk=sub_pk)
         sub.status = Task.Status.TODO if sub.status == Task.Status.DONE else Task.Status.DONE
         sub.save()
+        action = "completó" if sub.status == Task.Status.DONE else "reabrió"
+        record(request.user, V.SUBTASK, task.project,
+               f"{action} la subtarea «{sub.title}» de «{task.title}»", task=task)
         return render(request, "tasks/partials/subtasks.html", subtasks_ctx(task, request.user))
 
 
@@ -345,7 +367,10 @@ class SubtaskDeleteView(_TaskActionView):
         task = self.get_task(pk)
         if not task.user_can_work_on(request.user):
             raise PermissionDenied
-        get_object_or_404(task.subtasks.alive(), pk=sub_pk).soft_delete()
+        sub = get_object_or_404(task.subtasks.alive(), pk=sub_pk)
+        sub.soft_delete()
+        record(request.user, V.SUBTASK, task.project,
+               f"eliminó la subtarea «{sub.title}» de «{task.title}»", task=task)
         return render(request, "tasks/partials/subtasks.html", subtasks_ctx(task, request.user))
 
 
@@ -361,6 +386,7 @@ class CommentAddView(_TaskActionView):
             comment.author = request.user
             comment.save()
             notify_comment(comment)
+            record(request.user, V.COMMENT, task.project, f"comentó en «{task.title}»", task=task)
             form = None
         return render(request, "tasks/partials/comments.html", comments_ctx(task, request.user, form))
 
@@ -389,6 +415,8 @@ class AttachmentAddView(_TaskActionView):
             attachment.filename = upload.name
             attachment.size = upload.size
             attachment.save()
+            record(request.user, V.FILE, task.project,
+                   f"adjuntó «{attachment.filename}» en «{task.title}»", task=task)
             form = None
         return render(request, "tasks/partials/attachments.html", attachments_ctx(task, request.user, form))
 
@@ -399,8 +427,10 @@ class AttachmentDeleteView(_TaskActionView):
         attachment = get_object_or_404(task.attachments, pk=attachment_pk)
         if not (task.project.user_can_manage(request.user) or attachment.uploaded_by_id == request.user.pk):
             raise PermissionDenied
+        name = attachment.filename
         attachment.file.delete(save=False)
         attachment.delete()
+        record(request.user, V.FILE, task.project, f"eliminó el archivo «{name}» de «{task.title}»", task=task)
         return render(request, "tasks/partials/attachments.html", attachments_ctx(task, request.user))
 
 
@@ -423,6 +453,8 @@ class TimeLogAddView(_TaskActionView):
             log.task = task
             log.user = request.user
             log.save()
+            record(request.user, V.HOURS, task.project,
+                   f"registró {log.hours:.2f} h en «{task.title}»", task=task)
             form = None
         return render(request, "tasks/partials/timelogs.html", timelogs_ctx(task, request.user, form))
 

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Calendario · TaskFlow{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+  <h1 class="text-2xl font-bold">Calendario</h1>
+  <form method="get" class="flex flex-wrap items-center gap-3 text-sm">
+    <input type="hidden" name="y" value="{{ cal.year }}">
+    <input type="hidden" name="m" value="{{ cal.month }}">
+    <select name="project" onchange="this.form.submit()" class="border border-slate-300 rounded px-3 py-2">
+      <option value="">Todos los proyectos</option>
+      {% for p in projects %}
+        <option value="{{ p.pk }}" {% if project and project.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>
+      {% endfor %}
+    </select>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" name="mine" value="1" {% if mine %}checked{% endif %} onchange="this.form.submit()">
+      Solo mis tareas
+    </label>
+  </form>
+</div>
+
+<div class="flex items-center gap-3 mb-3">
+  <a href="?y={{ cal.prev_y }}&m={{ cal.prev_m }}{{ extra }}" class="px-3 py-1.5 bg-white border rounded hover:bg-slate-50" aria-label="Mes anterior">←</a>
+  <h2 class="text-lg font-semibold w-44 text-center">{{ cal.title }}</h2>
+  <a href="?y={{ cal.next_y }}&m={{ cal.next_m }}{{ extra }}" class="px-3 py-1.5 bg-white border rounded hover:bg-slate-50" aria-label="Mes siguiente">→</a>
+  <a href="?y={{ cal.today_y }}&m={{ cal.today_m }}{{ extra }}" class="px-3 py-1.5 text-sm border rounded hover:bg-slate-50">Hoy</a>
+</div>
+
+<div class="overflow-x-auto">
+  <div class="min-w-[720px] bg-white rounded-lg shadow">
+    <div class="grid grid-cols-7 text-xs font-medium text-slate-500 border-b">
+      {% for d in "Lun,Mar,Mié,Jue,Vie,Sáb,Dom"|make_list %}{% endfor %}
+      <div class="px-2 py-2">Lun</div><div class="px-2 py-2">Mar</div><div class="px-2 py-2">Mié</div>
+      <div class="px-2 py-2">Jue</div><div class="px-2 py-2">Vie</div><div class="px-2 py-2">Sáb</div><div class="px-2 py-2">Dom</div>
+    </div>
+
+    {% for week in cal.weeks %}
+    <div class="grid grid-cols-7 border-b last:border-b-0">
+      {% for day in week %}
+      <div class="min-h-[6.5rem] p-1.5 border-r last:border-r-0 {% if not day.in_month %}bg-slate-50{% endif %}">
+        <p class="mb-1">
+          {% if day.is_today %}
+            <span class="inline-flex items-center justify-center h-5 w-5 rounded-full bg-blue-600 text-white text-xs">{{ day.date.day }}</span>
+          {% else %}
+            <span class="text-xs {% if day.in_month %}text-slate-600{% else %}text-slate-400{% endif %}">{{ day.date.day }}</span>
+          {% endif %}
+        </p>
+        {% for p in day.projects %}
+          <a href="{{ p.get_absolute_url }}" title="Cierre estimado del proyecto"
+             class="block truncate rounded px-1.5 py-0.5 mb-1 text-[11px] leading-4 bg-purple-100 text-purple-800 font-medium">Cierre: {{ p.name }}</a>
+        {% endfor %}
+        {% for t in day.tasks|slice:":3" %}{% include "planning/partials/chip.html" %}{% endfor %}
+        {% if day.tasks|length > 3 %}
+          <details>
+            <summary class="text-[11px] text-blue-700 cursor-pointer">+{{ day.tasks|length|add:"-3" }} más</summary>
+            {% for t in day.tasks|slice:"3:" %}{% include "planning/partials/chip.html" %}{% endfor %}
+          </details>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<p class="text-xs text-slate-500 mt-3">
+  Se muestran las fechas límite de las tareas principales.
+  <span class="text-red-700">Rojo</span>: atrasada ·
+  <span class="text-orange-700">Naranja</span>: urgente ·
+  <span class="text-green-700">Verde</span>: hecha ·
+  <span class="text-purple-700">Morado</span>: cierre estimado del proyecto.
+</p>
+{% endblock %}

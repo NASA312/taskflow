@@ -37,8 +37,10 @@
     <div class="bg-white rounded-lg shadow p-5">
       <div class="flex justify-between items-center mb-3">
         <h2 class="font-semibold">Tareas</h2>
-        <a href="{% url 'project_board' project.pk %}"
-           class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm">Abrir tablero</a>
+        <div class="flex gap-2">
+          <a href="{% url 'project_gantt' project.pk %}" class="bg-white border px-3 py-1.5 rounded text-sm hover:bg-slate-50">Ver Gantt</a>
+          <a href="{% url 'project_board' project.pk %}" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm">Abrir tablero</a>
+        </div>
       </div>
       {% if task_total %}
         <div class="w-full bg-slate-200 rounded-full h-2 mb-1">
@@ -57,6 +59,15 @@
           <a href="{% url 'report_dashboard' %}?project={{ project.pk }}" class="text-sm text-blue-600 hover:underline">Ver reporte</a>
         {% endif %}
       </div>
+          {% if show_activity %}
+    <div id="activity" class="bg-white rounded-lg shadow p-5">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="font-semibold">Actividad reciente</h2>
+        <a href="{% url 'activity_list' %}?project={{ project.pk }}" class="text-sm text-blue-600 hover:underline">Ver toda</a>
+      </div>
+      {% include "activity/partials/feed.html" with show_project=False show_task_link=True %}
+    </div>
+    {% endif %}
       <div class="grid grid-cols-2 gap-3 text-center text-sm">
         <div class="bg-slate-50 rounded p-3"><p class="text-xl font-bold">{{ hours_estimated|floatformat:2 }}</p><p class="text-xs text-slate-500">Estimadas</p></div>
         <div class="bg-slate-50 rounded p-3"><p class="text-xl font-bold">{{ hours_logged|floatformat:2 }}</p><p class="text-xs text-slate-500">Registradas</p></div>

@@ -1,0 +1,7 @@
+<a href="{{ t.get_absolute_url }}" title="{{ t.title }} · {{ t.project.name }}"
+   class="block truncate rounded px-1.5 py-0.5 mb-1 text-[11px] leading-4
+   {% if t.status == 'done' %}bg-green-100 text-green-800 line-through
+   {% elif t.is_overdue %}bg-red-100 text-red-800
+   {% elif t.priority == 4 %}bg-orange-100 text-orange-800
+   {% elif t.priority == 3 %}bg-amber-100 text-amber-800
+   {% else %}bg-blue-100 text-blue-800{% endif %}">{{ t.title }}</a>

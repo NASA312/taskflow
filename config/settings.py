@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     "apps.tasks",
     "apps.reports",
     "apps.notifications",
+    "apps.activity", 
+    "apps.planning",
 ]
 
 MIDDLEWARE = [
@@ -154,6 +156,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.notifications.tasks.cleanup_old_notifications",
         "schedule": crontab(hour=3, minute=30, day_of_week="sun"),  # domingos 3:30
     },
+}
+
+# ---------- Actividad ----------
+ACTIVITY_RETENTION_DAYS = 365
+
+CELERY_BEAT_SCHEDULE["limpieza-de-actividad"] = {
+    "task": "apps.activity.tasks.cleanup_old_activity",
+    "schedule": crontab(hour=4, minute=0, day_of_week="sun"),     # domingos 4:00
 }
 
 # ---------- Notificaciones ----------

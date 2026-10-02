@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Actividad · TaskFlow{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Actividad</h1>
+
+<form method="get" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4 text-sm">
+  <select name="project" class="border border-slate-300 rounded px-3 py-2">
+    <option value="">Todos los proyectos</option>
+    {% for p in projects %}
+      <option value="{{ p.pk }}" {% if filters.project == p.pk|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="actor" class="border border-slate-300 rounded px-3 py-2">
+    <option value="">Todas las personas</option>
+    {% for u in actors %}
+      <option value="{{ u.pk }}" {% if filters.actor == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+    {% endfor %}
+  </select>
+  <select name="verb" class="border border-slate-300 rounded px-3 py-2">
+    <option value="">Todo tipo de evento</option>
+    {% for value, label in verbs %}
+      <option value="{{ value }}" {% if filters.verb == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <div class="flex gap-2">
+    <button class="bg-slate-800 text-white px-4 rounded flex-1">Filtrar</button>
+    <a href="{% url 'activity_list' %}" class="px-3 py-2 border rounded hover:bg-slate-50">Limpiar</a>
+  </div>
+</form>
+
+<div class="bg-white rounded-lg shadow px-5 py-2">
+  {% include "activity/partials/feed.html" with show_project=True show_task_link=True %}
+</div>
+
+{% if is_paginated %}
+<div class="flex justify-between mt-4 text-sm">
+  {% if page_obj.has_previous %}<a class="text-blue-600" href="?page={{ page_obj.previous_page_number }}{{ extra }}">← Anterior</a>{% else %}<span></span>{% endif %}
+  <span class="text-slate-500">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="text-blue-600" href="?page={{ page_obj.next_page_number }}{{ extra }}">Siguiente →</a>{% else %}<span></span>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

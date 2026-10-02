@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Gantt · {{ project.name }} · TaskFlow{% endblock %}
+
+{% block content %}
+<a href="{{ project.get_absolute_url }}" class="text-sm text-blue-600 hover:underline">← {{ project.name }}</a>
+
+<div class="flex flex-wrap justify-between items-center gap-3 mt-2 mb-4">
+  <h1 class="text-2xl font-bold">Diagrama de Gantt</h1>
+  <div class="flex items-center gap-2 text-sm">
+    <a href="{% url 'project_board' project.pk %}" class="bg-white border px-3 py-1.5 rounded hover:bg-slate-50">Tablero</a>
+    <div class="inline-flex rounded border overflow-hidden">
+      {% for value, label in zooms %}
+        <a href="?zoom={{ value }}" class="px-3 py-1.5 {% if zoom == value %}bg-slate-800 text-white{% else %}bg-white hover:bg-slate-50{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if not gantt.rows %}
+  <div class="bg-white rounded-lg shadow p-8 text-center text-slate-500">
+    Ninguna tarea tiene fechas todavía. Agrega fecha de inicio o límite a tus tareas para verlas aquí.
+  </div>
+{% else %}
+<div class="bg-white rounded-lg shadow flex overflow-hidden">
+
+  <!-- Columna de nombres -->
+  <div class="w-64 shrink-0 border-r">
+    <div class="border-b px-3 flex items-end pb-1 text-xs font-medium text-slate-500" style="height:48px">Tarea</div>
+    {% for r in gantt.rows %}
+      <div class="px-3 flex flex-col justify-center border-b border-slate-100" style="height:{{ gantt.row_h }}px">
+        <a href="{{ r.task.get_absolute_url }}" class="text-sm font-medium truncate hover:underline" title="{{ r.task.title }}">{{ r.task.title }}</a>
+        <span class="text-[11px] text-slate-500 truncate">{{ r.task.get_status_display }} · {{ r.range_text }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Línea de tiempo -->
+  <div id="gantt-scroll" class="flex-1 overflow-x-auto">
+    <div class="relative" style="width:{{ gantt.total_width }}px">
+
+      <div class="relative border-b bg-slate-50" style="height:24px">
+        {% for m in gantt.months %}
+          <div class="absolute top-0 h-full border-l px-1 text-xs font-medium text-slate-600 overflow-hidden whitespace-nowrap leading-6"
+               style="left:{{ m.left }}px;width:{{ m.width }}px">{{ m.label }}</div>
+        {% endfor %}
+      </div>
+      <div class="relative border-b bg-slate-50" style="height:24px">
+        {% for t in gantt.ticks %}
+          <div class="absolute top-0 h-full text-center text-[10px] leading-6 border-l {% if t.weekend %}text-slate-400 bg-slate-100{% else %}text-slate-500{% endif %}"
+               style="left:{{ t.left }}px;width:{{ t.width }}px">{{ t.label }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="relative"
+           style="height:{{ gantt.body_height }}px;
+                  background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+                                    repeating-linear-gradient(to bottom, transparent 0, transparent {{ gantt.row_line }}px, #e2e8f0 {{ gantt.row_line }}px, #e2e8f0 {{ gantt.row_h }}px);
+                  background-size: {{ gantt.grid_size }}px 100%, auto;">
+
+        {% if gantt.today_left is not None %}
+          <div class="absolute top-0 bottom-0 w-px bg-red-400 z-10" style="left:{{ gantt.today_left }}px" title="Hoy"></div>
+        {% endif %}
+
+        <svg class="absolute top-0 left-0 pointer-events-none z-10" width="{{ gantt.total_width }}" height="{{ gantt.body_height }}">
+          <defs>
+            <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0 0 L8 4 L0 8 z" fill="#64748b"/>
+            </marker>
+            <marker id="arrow-bad" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0 0 L8 4 L0 8 z" fill="#dc2626"/>
+            </marker>
+          </defs>
+          {% for dep in gantt.deps %}
+            <path d="{{ dep.d }}" fill="none" stroke-width="1.5"
+                  {% if dep.conflict %}stroke="#dc2626" marker-end="url(#arrow-bad)"{% else %}stroke="#64748b" marker-end="url(#arrow)"{% endif %}/>
+          {% endfor %}
+        </svg>
+
+        {% for r in gantt.rows %}
+          <a href="{{ r.task.get_absolute_url }}" title="{{ r.task.title }} · {{ r.range_text }} · {{ r.progress }}%"
+             class="absolute rounded border overflow-hidden whitespace-nowrap text-[11px] leading-[20px] px-1.5 {% if r.overdue %}ring-2 ring-red-400{% endif %}"
+             style="top:{{ r.top }}px;left:{{ r.left }}px;width:{{ r.width }}px;height:22px;background:{{ r.color }}33;border-color:{{ r.color }}">
+            <span class="absolute inset-y-0 left-0" style="width:{{ r.progress }}%;background:{{ r.color }}"></span>
+            <span class="relative text-slate-900">{{ r.label }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-xs text-slate-600">
+  <span><span class="inline-block h-2.5 w-2.5 rounded-sm align-middle" style="background:#94a3b8"></span> Por hacer</span>
+  <span><span class="inline-block h-2.5 w-2.5 rounded-sm align-middle" style="background:#3b82f6"></span> En proceso</span>
+  <span><span class="inline-block h-2.5 w-2.5 rounded-sm align-middle" style="background:#f59e0b"></span> En revisión</span>
+  <span><span class="inline-block h-2.5 w-2.5 rounded-sm align-middle" style="background:#22c55e"></span> Hecho</span>
+  <span><span class="inline-block h-0.5 w-4 bg-slate-500 align-middle"></span> Dependencia</span>
+  <span><span class="inline-block h-0.5 w-4 bg-red-600 align-middle"></span> Conflicto: empieza antes de que termine su bloqueadora</span>
+  <span><span class="inline-block h-3 w-px bg-red-400 align-middle"></span> Hoy</span>
+</div>
+{% endif %}
+
+{% if gantt.undated %}
+<div class="bg-white rounded-lg shadow p-5 mt-6">
+  <h2 class="font-semibold mb-2">Sin fechas ({{ gantt.undated|length }})</h2>
+  <ul class="text-sm divide-y">
+    {% for t in gantt.undated %}
+      <li class="py-1.5"><a href="{{ t.get_absolute_url }}" class="text-blue-700 hover:underline">{{ t.title }}</a>
+        <span class="text-xs text-slate-500">· {{ t.get_status_display }}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if gantt.today_left is not None %}
+<script>
+  // Deja la línea de "hoy" a la vista al abrir el diagrama
+  document.getElementById("gantt-scroll").scrollLeft = Math.max(0, {{ gantt.today_left }} - 240);
+</script>
+{% endif %}
+{% endblock %}

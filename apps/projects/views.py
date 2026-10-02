@@ -16,6 +16,10 @@ from apps.tasks.models import Task
 from apps.core.mixins import CompanyRequiredMixin, RoleRequiredMixin
 from .forms import ProjectForm, ProjectMemberForm
 from .models import Project, ProjectMember
+from apps.activity.models import Activity
+from apps.activity.services import changed_fields, person, record
+
+V = Activity.Verb      # junto a: User = get_user_model()
 
 User = get_user_model()
 
@@ -94,6 +98,12 @@ class ProjectDetailView(ProjectQuerysetMixin, DetailView):
         ctx["task_total"] = total
         ctx["task_done"] = done
         ctx["progress"] = round(done * 100 / total) if total else 0
+        user = self.request.user
+        ctx["show_activity"] = user.role != user.Role.CLIENT
+        ctx["activities"] = (
+            Activity.objects.for_user(user).filter(project=self.object)
+            .select_related("actor", "task")[:8]
+        )
         return ctx
 
 
@@ -111,6 +121,7 @@ class ProjectCreateView(SuccessMessageMixin, RoleRequiredMixin, CreateView):
         ProjectMember.objects.create(
             project=self.object, user=self.request.user, role=ProjectMember.Role.MANAGER
         )
+        record(self.request.user, V.CREATED, self.object, f"creó el proyecto «{self.object.name}»")
         return response
 
 
@@ -119,12 +130,20 @@ class ProjectUpdateView(SuccessMessageMixin, ProjectManageMixin, UpdateView):
     template_name = "projects/project_form.html"
     success_message = "Proyecto actualizado."
 
+    def form_valid(self, form):
+        changed = changed_fields(form)
+        response = super().form_valid(form)
+        if changed:
+            record(self.request.user, V.UPDATED, self.object, f"editó el proyecto ({changed})")
+        return response
+
 
 class ProjectDeleteView(ProjectManageMixin, DeleteView):
     template_name = "projects/project_confirm_delete.html"
     success_url = reverse_lazy("project_list")
 
     def form_valid(self, form):
+        record(self.request.user, V.DELETED, self.object, f"eliminó el proyecto «{self.object.name}»")
         self.object.soft_delete()
         messages.success(self.request, "Proyecto eliminado.")
         return HttpResponseRedirect(self.get_success_url())
@@ -147,7 +166,8 @@ class ProjectMemberAddView(_MemberActionView):
         project = self.get_project(request, pk)
         form = ProjectMemberForm(request.POST, project=project)
         if form.is_valid():
-            form.save()
+            member = form.save()
+            record(request.user, V.MEMBER, project, f"agregó a {person(member.user)} al proyecto")
             form = None  # formulario limpio en la respuesta
         return render(request, "projects/partials/members.html", _members_ctx(project, request.user, form))
 
@@ -155,5 +175,8 @@ class ProjectMemberAddView(_MemberActionView):
 class ProjectMemberRemoveView(_MemberActionView):
     def post(self, request, pk, member_pk):
         project = self.get_project(request, pk)
-        get_object_or_404(project.members, pk=member_pk).delete()
+        member = get_object_or_404(project.members.select_related("user"), pk=member_pk)
+        name = person(member.user)
+        member.delete()
+        record(request.user, V.MEMBER, project, f"quitó a {name} del proyecto")
         return render(request, "projects/partials/members.html", _members_ctx(project, request.user))
